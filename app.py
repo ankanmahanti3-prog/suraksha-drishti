@@ -418,7 +418,6 @@ if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 if "chat_strain_detected" not in st.session_state:
     st.session_state.chat_strain_detected = False
-# Per-personnel dialogue storage dictionary
 if "personnel_dialogue_notes" not in st.session_state:
     st.session_state.personnel_dialogue_notes = {}
 if "live_evaluations" not in st.session_state:
@@ -649,7 +648,7 @@ if user_role == "Personnel":
             trauma_exposure = st.checkbox("Critical Incident Exposure — Authorized (Past 30 Days)", value=user["trauma_incident_flag"])
 
             st.markdown("<div style='border-top: 1px solid #edf2f7; margin: 20px 0;'></div>", unsafe_allow_html=True)
-            st.markdown("<h3 style='font-size: 1rem; font-weight: 700; color: #0f172a; margin-bottom: 6px;'>2. Standardized Psychiatric Self-Check (PHQ-4 / GAD-2)</h3>", unsafe_allow_html=True)
+            st.markdown("<h3 style='font-size: 1rem; font-weight: 700; color: #0f172a; margin-bottom: 6px;'>2. Standardized Mental Wellbeing Self-Check (PHQ-4 / GAD-2)</h3>", unsafe_allow_html=True)
             st.caption("Confidential psychological self-check (0: Not at all | 1: Several days | 2: Over half the days | 3: Nearly every day)")
             
             p1, p2 = st.columns(2)
@@ -814,7 +813,6 @@ if user_role == "Personnel":
                         
                         has_severe = any(w in lower_reply for w in severe_lexicon)
                         
-                        # Store note specific to this logged-in personnel ID
                         if has_distress:
                             st.session_state.chat_strain_detected = True
                             st.session_state.personnel_dialogue_notes[curr_id] = f"Personnel notes sleep fragmentation, fatigue, or social disconnect ('{user_reply[:60]}...'). Recommend priority leave review and informal peer check."
@@ -1063,7 +1061,6 @@ else:
 </div>
 </div>""", unsafe_allow_html=True)
 
-                # Fetch only this selected personnel's dialogue summary
                 selected_note = st.session_state.personnel_dialogue_notes.get(
                     selected_case, 
                     "No voluntary guided dialogue recorded for this personnel profile during the current session."
@@ -1217,7 +1214,7 @@ st.markdown("""<div style="background: #ffffff; border: 1px solid #e2e8f0; borde
 <b style="color:#0f172a;">SURAKSHA-DRISHTI</b> | AI-Assisted Personnel Welfare & Stress-Risk System (MHA PS ID: 26186)
 </div>
 <div>
-Prototype running locally; designed for air-gapped edge deployment. Trained on a synthetic personnel-risk dataset for pipeline feasibility demonstration (ROC-AUC: 0.941 on synthetic validation split).
+Prototype running locally; designed for air-gapped edge deployment. Trained on a synthetic personnel-risk dataset for pipeline feasibility demonstration (ROC-AUC: 0.879 on synthetic validation split).
 </div>
 <div style="display: flex; gap: 14px; font-weight: 600;">
 <span>🔒 Privacy-first</span>
