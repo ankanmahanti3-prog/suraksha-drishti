@@ -251,7 +251,7 @@ def load_ml_model():
 
 model, feature_names, explainer, model_load_err = load_ml_model()
 
-# --- ROBUST BIOMETRIC EXTRACTION ---
+# --- BIOMETRIC EXTRACTION WITH SIGNAL-QUALITY GATE ---
 def butter_bandpass(lowcut, highcut, fs, order=3):
     nyq = 0.5 * fs
     b, a = butter(order, [lowcut/nyq, highcut/nyq], btype='band')
@@ -264,7 +264,7 @@ def safe_bandpass_filter(data, lowcut=0.75, highcut=3.0, fs=30.0):
         b, a = butter_bandpass(lowcut, highcut, fs)
         return filtfilt(b, a, data)
     except Exception as e:
-        logger.warning(f"Filter fallback: {e}")
+        logger.warning(f"Filter error: {e}")
         return np.zeros_like(data)
 
 def capture_biometrics(duration=10):
@@ -282,7 +282,6 @@ def capture_biometrics(duration=10):
     fs_audio = 44100
     audio_record = None
 
-    # Safe microphone initialization
     mic_live = False
     try:
         audio_record = sd.rec(int(duration * fs_audio), samplerate=fs_audio, channels=1, dtype='float32')
@@ -291,7 +290,6 @@ def capture_biometrics(duration=10):
         logger.warning(f"Microphone sensor unavailable: {e}")
         mic_live = False
 
-    # Safe camera hardware initialization
     cap = None
     cam_live = False
     try:
@@ -316,7 +314,7 @@ def capture_biometrics(duration=10):
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             faces = face_cascade.detectMultiScale(gray, scaleFactor=1.2, minNeighbors=5, minSize=(100, 100))
             
-            current_g = green_signals[-1] if len(green_signals) > 0 else 100.0
+            current_g = green_signals[-1] if len(green_signals) > 0 else 0.0
             for (x, y, w, h) in faces:
                 fh_x1, fh_x2 = int(x + w * 0.28), int(x + w * 0.72)
                 fh_y1, fh_y2 = int(y + h * 0.08), int(y + h * 0.22)
@@ -340,7 +338,6 @@ def capture_biometrics(duration=10):
         elapsed = time.time() - start_time
         effective_fps = len(green_signals) / elapsed if elapsed > 1.0 else 30.0
     else:
-        # Fallback simulation
         time.sleep(1.2)
         progress_bar.progress(100)
         green_signals = list(np.sin(np.linspace(0, 15, 120)) * 5.0 + 105.0)
@@ -356,22 +353,38 @@ def capture_biometrics(duration=10):
     video_placeholder.empty()
     chart_placeholder.empty()
 
-    # Pulse frequency estimation
+    # --- SIGNAL-QUALITY GATE ---
+    bpm = None
+    quality_pass = False
+    filtered = np.zeros(60)
+
     if cam_live and len(green_signals) >= 60:
         raw_sig = np.array(green_signals)
-        detrended = raw_sig - np.mean(raw_sig)
-        filtered = safe_bandpass_filter(detrended, lowcut=0.75, highcut=3.0, fs=effective_fps)
-        fft_vals = np.abs(np.fft.rfft(filtered))
-        fft_freqs = np.fft.rfftfreq(len(filtered), d=1.0/effective_fps)
-        valid_idx = np.where((fft_freqs >= 0.75) & (fft_freqs <= 3.0))
-        if len(valid_idx[0]) > 0:
-            peak_freq = fft_freqs[valid_idx][np.argmax(fft_vals[valid_idx])]
-            bpm = float(np.clip(peak_freq * 60.0, 52.0, 145.0))
-        else:
-            bpm = 74.0
-    else:
-        filtered = np.zeros(60)
+        sig_variance = float(np.var(raw_sig))
+        
+        # Quality Gate 1: Check variance (non-flat signal)
+        if sig_variance > 0.05:
+            detrended = raw_sig - np.mean(raw_sig)
+            filtered = safe_bandpass_filter(detrended, lowcut=0.75, highcut=3.0, fs=effective_fps)
+            fft_vals = np.abs(np.fft.rfft(filtered))
+            fft_freqs = np.fft.rfftfreq(len(filtered), d=1.0/effective_fps)
+            valid_idx = np.where((fft_freqs >= 0.75) & (fft_freqs <= 3.0))
+            
+            if len(valid_idx[0]) > 0:
+                peak_idx = valid_idx[0][np.argmax(fft_vals[valid_idx])]
+                peak_power = fft_vals[peak_idx]
+                mean_noise = np.mean(fft_vals[valid_idx])
+                
+                # Quality Gate 2: Signal-to-noise peak ratio > 1.8
+                if mean_noise > 0 and (peak_power / mean_noise) > 1.8:
+                    peak_freq = fft_freqs[peak_idx]
+                    bpm = float(np.clip(peak_freq * 60.0, 50.0, 160.0))
+                    quality_pass = True
+    elif not cam_live:
+        # Transparent simulation mode value
+        filtered = np.sin(np.linspace(0, 10, 60))
         bpm = 72.0
+        quality_pass = True
 
     # Vocal pitch variability estimation
     pitch_var = 1.25
@@ -395,7 +408,7 @@ def capture_biometrics(duration=10):
 
     pitch_var = float(np.clip(pitch_var, 0.5, 6.0))
     is_live = (cam_live and mic_live)
-    return bpm, pitch_var, filtered, is_live
+    return bpm, pitch_var, filtered, is_live, quality_pass
 
 # --- SESSION STATE INITIALIZATION ---
 if "booted" not in st.session_state:
@@ -453,7 +466,7 @@ if not st.session_state.authenticated:
 <div style="font-size: 2.5rem; margin-bottom: 10px;">🛡️</div>
 <h2 style="color: #0f172a; font-size: 1.6rem; font-weight: 800; margin-bottom: 4px;">SURAKSHA-DRISHTI</h2>
 <p style="color: #4f46e5; font-size: 0.9rem; font-weight: 600; margin-bottom: 2px;">Personnel Welfare Intelligence Platform</p>
-<p style="color: #64748b; font-size: 0.78rem;">Role-based access gateway for authorized personnel and medical officers</p>
+<p style="color: #64748b; font-size: 0.78rem;">Role-Based Portal Isolation for authorized personnel and medical officers</p>
 </div>""", unsafe_allow_html=True)
 
         with st.form(key="login_form", border=True):
@@ -479,7 +492,7 @@ if not st.session_state.authenticated:
                     st.error(result)
 
         st.markdown("""<div style="display: flex; justify-content: space-around; text-align: center; margin-top: 14px; font-size: 0.75rem; color: #64748b; font-weight: 600;">
-<div>👤 Role-Based Access</div>
+<div>👤 Role-Based Portal Isolation (Prototype)</div>
 <div>🛡️ Non-Disciplinary Firewall</div>
 <div>⚙️ Local AI Processing</div>
 </div>
@@ -582,6 +595,7 @@ if user_role == "Personnel":
                 insight_title = "⚠️ ELEVATED WELFARE-RISK PATTERN DETECTED" if current_score >= 60 else "✅ OPERATIONAL STRAIN WITHIN NOMINAL TOLERANCE"
                 insight_color = "#ef4444" if current_score >= 60 else "#10b981"
                 telemetry_status = "🟢 LIVE SENSOR DATA" if live_eval["is_live"] else "🟡 SIMULATED TELEMETRY"
+                pulse_text = f"{live_eval['bpm']:.0f} BPM (Δ {live_eval['bpm'] - 70:.1f} contextual variance)" if live_eval['bpm'] is not None else "Unavailable (Optical quality below threshold)"
                 st.markdown(f"""<div class="pop-card">
 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
 <span style="font-size: 0.92rem; font-weight: 800; color: {insight_color};">{insight_title}</span>
@@ -591,7 +605,7 @@ if user_role == "Personnel":
 <div style="display: flex; flex-direction: column; gap: 8px; font-size: 0.8rem; color: #334155;">
 <div style="background: #f8fafc; padding: 10px 14px; border-radius: 10px; border: 1px solid #e2e8f0;">• <b>Days since sanctioned leave:</b> {live_eval['days_no_leave']} days logged</div>
 <div style="background: #f8fafc; padding: 10px 14px; border-radius: 10px; border: 1px solid #e2e8f0;">• <b>Reported sleep duration:</b> {live_eval['sleep_hours']} hours/day</div>
-<div style="background: #f8fafc; padding: 10px 14px; border-radius: 10px; border: 1px solid #e2e8f0;">• <b>Autonomic pulse indicator:</b> {live_eval['bpm']:.0f} BPM (Δ {live_eval['bpm'] - 70:.1f} contextual variance)</div>
+<div style="background: #f8fafc; padding: 10px 14px; border-radius: 10px; border: 1px solid #e2e8f0;">• <b>Autonomic pulse indicator:</b> {pulse_text}</div>
 </div>
 </div>""", unsafe_allow_html=True)
             else:
@@ -658,7 +672,7 @@ if user_role == "Personnel":
             subjective_distress = st.select_slider(
                 "Overall Subjective Exhaustion", 
                 options=[1, 2, 3, 4], 
-                format_func=lambda x: {1: "1 - Rested", 2: "2 - Mild Strain", 3: "3 - Moderate Exhaustion", 4: "4 - Severe Burnout"}[x], 
+                format_func=lambda x: {1: "1 - Rested", 2: "2 - Mild Strain", 3: "3 - Moderate Exhaustion", 4: "4 - Severe Exhaustion"}[x], 
                 value=inferred_fatigue
             )
             st.markdown('</div>', unsafe_allow_html=True)
@@ -667,12 +681,17 @@ if user_role == "Personnel":
             st.markdown('<div class="pop-card">', unsafe_allow_html=True)
             st.markdown("<h3 style='font-size: 1rem; font-weight: 700; color: #0f172a; margin-bottom: 4px;'>4. Optional Auxiliary Telemetry</h3>", unsafe_allow_html=True)
             st.caption("Non-diagnostic, consent-backed optical pulse and voice acoustic perturbation estimation.")
-            consent = st.checkbox("I voluntarily consent to temporary optical/acoustic check-in.", value=True)
+            
+            # Explicit Opt-in: Unchecked by default
+            consent = st.checkbox("I voluntarily consent to temporary optical/acoustic check-in.", value=False)
             start_scan = st.button("🚀 INITIATE VOLUNTARY CHECK-IN", type="primary", use_container_width=True, disabled=not consent)
 
             if start_scan:
                 with st.spinner("Acquiring voluntary optical & acoustic signals..."):
-                    bpm, vocal_pitch_var, pulse_waveform, is_live_sensor = capture_biometrics(duration=10)
+                    bpm, vocal_pitch_var, pulse_waveform, is_live_sensor, quality_pass = capture_biometrics(duration=10)
+
+                # Graceful pulse delta handling if optical quality fails
+                bpm_delta = (bpm - 70.0) if (bpm is not None and quality_pass) else 0.0
 
                 hardship_map = {"Peace Station / Standard Base": 0, "Counter-Insurgency / High Hardship": 1, "Extreme High Altitude": 2}
                 input_df = pd.DataFrame([{
@@ -683,14 +702,12 @@ if user_role == "Personnel":
                     'Sleep_Hours': sleep_hours,
                     'Subjective_Fatigue': subjective_distress,
                     'Optional_Vocal_Jitter': vocal_pitch_var,
-                    'Optional_BPM_Delta': bpm - 70.0
+                    'Optional_BPM_Delta': bpm_delta
                 }])
 
-                # Explicit feature order verification
                 if feature_names is not None:
                     input_df = input_df[feature_names]
 
-                # Strict ML error handling without fake score substitution
                 if model is not None:
                     try:
                         risk_prob = model.predict_proba(input_df)[0][1]
@@ -719,6 +736,7 @@ if user_role == "Personnel":
                         "jitter": vocal_pitch_var,
                         "risk_index": risk_index,
                         "is_live": is_live_sensor,
+                        "quality_pass": quality_pass,
                         "evaluated_at": timestamp_str
                     }
                     st.session_state.live_evaluations[curr_id] = eval_record
@@ -731,9 +749,16 @@ if user_role == "Personnel":
                         st.markdown('<span class="pill-badge-amber">🟡 DEMO SIMULATION MODE (Hardware Inaccessible)</span>', unsafe_allow_html=True)
 
                     m1, m2, m3 = st.columns(3)
-                    m1.metric("Autonomic Pulse", f"{bpm:.0f} BPM")
+                    if quality_pass and bpm is not None:
+                        m1.metric("Autonomic Pulse", f"{bpm:.0f} BPM")
+                    else:
+                        m1.metric("Autonomic Pulse", "Unreliable", help="Optical signal quality below minimum SNR threshold due to movement/illumination.")
+                    
                     m2.metric("Voice Pitch Var.", f"{vocal_pitch_var:.2f}%")
                     m3.metric("Evaluated Risk", f"{risk_index}/100", delta=f"{risk_index - 45} vs Base", delta_color="inverse")
+
+                    if not quality_pass and is_live_sensor:
+                        st.warning("⚠️ Pulse estimate unavailable — optical signal quality too low (poor lighting, movement, or weak capillary signal). Risk estimation evaluated using operational duty factors and acoustic indicators.")
 
                     st.write("**Optical Waveform (Capillary Variation Proxy):**")
                     st.line_chart(pulse_waveform[-150:], height=140)
@@ -779,12 +804,10 @@ if user_role == "Personnel":
                 col_btn1, col_btn2 = st.columns([1, 1])
                 if col_btn1.button("Submit Response →", type="primary", use_container_width=True):
                     if user_reply.strip():
-                        # Negation-aware lexicon parsing
                         distress_lexicon = ["tired", "exhausted", "cannot sleep", "can't sleep", "nightmare", "anxious", "worried", "lonely", "isolated", "stress", "helpless", "burden", "angry", "disturbed"]
                         severe_lexicon = ["die", "ending it", "kill", "give up", "suicide", "no point"]
                         
                         lower_reply = user_reply.lower()
-                        # Simple negation check
                         negations = ["not ", "don't ", "dont ", "never ", "no "]
                         has_distress = False
                         for word in distress_lexicon:
@@ -953,7 +976,6 @@ elif user_role == "Commander":
 <h3 style="font-size: 1.05rem; font-weight: 800; color: #0f172a; margin-bottom: 4px;">Unit Workload Distribution</h3>
 <p style="color: #64748b; font-size: 0.78rem; margin-bottom: 14px;">Current headcount distribution across strain bands</p>""", unsafe_allow_html=True)
             
-            # True 3-Band Categorization
             live_evals = st.session_state.live_evaluations
             if live_evals:
                 elevated_c = sum(1 for e in live_evals.values() if e["risk_index"] >= 60)
@@ -1056,6 +1078,8 @@ else:
                 nights_pct = min(100, int((nights / 7.0) * 100))
 
                 sensor_label = "Live Sensors" if case_data["is_live"] else "Simulated Data"
+                pulse_display = f"Pulse: {case_data['bpm']:.0f} BPM" if case_data["bpm"] is not None else "Pulse: Low SNR Quality"
+                
                 st.markdown(f"""<div class="pop-card">
 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
 <div style="font-size: 0.92rem; font-weight: 800; color: #0f172a;">LIVE EVIDENCE CHAIN ({selected_case})</div>
@@ -1086,7 +1110,7 @@ else:
 <div>
 <div style="display: flex; justify-content: space-between; margin-bottom: 4px; font-weight: 600; color: #0f172a;">
 <span>Auxiliary physiological & acoustic indicators</span>
-<span style="color: #4f46e5;">Pulse: {case_data['bpm']:.0f} BPM | Voice Pitch Var.: {case_data['jitter']:.2f}%</span>
+<span style="color: #4f46e5;">{pulse_display} | Voice Pitch Var.: {case_data['jitter']:.2f}%</span>
 </div>
 <div style="background: #f1f5f9; height: 8px; border-radius: 4px;"><div style="background: #4f46e5; width: {min(100, int(case_data['jitter'] * 25))}%; height: 100%; border-radius: 4px;"></div></div>
 </div>
@@ -1114,6 +1138,7 @@ else:
 <p style="color: #64748b; font-size: 0.8rem; margin-bottom: 16px;">Local feature contributions calculated dynamically from Random Forest tree paths for active case: <b>{selected_case}</b></p>
 </div>""", unsafe_allow_html=True)
 
+            bpm_val = (case_data["bpm"] - 70.0) if case_data["bpm"] is not None else 0.0
             sample_df = pd.DataFrame([{
                 'Days_Since_Leave': case_data["days_no_leave"],
                 'Night_Shifts_7d': case_data["night_shifts"],
@@ -1122,7 +1147,7 @@ else:
                 'Sleep_Hours': case_data["sleep_hours"],
                 'Subjective_Fatigue': case_data["fatigue"],
                 'Optional_Vocal_Jitter': case_data["jitter"],
-                'Optional_BPM_Delta': case_data["bpm"] - 70.0
+                'Optional_BPM_Delta': bpm_val
             }])
 
             if feature_names is not None:
@@ -1130,7 +1155,6 @@ else:
 
             display_labels = ["Days No Leave", "Night Shifts", "Hardship Zone", "Trauma Exposure", "Sleep Deficit", "Self-Report Fatigue", "Pitch Var. Proxy", "Pulse Delta"]
             
-            # Safe SHAP calculation without fake substitution
             shap_success = False
             pct_contribs = None
             if model is not None and explainer is not None:
@@ -1159,7 +1183,6 @@ else:
                 st.warning("⚠️ Local Explainability (SHAP) Calculation Unavailable for this evaluation. (Execution avoided hardcoded fallback values to maintain data integrity).")
 
         elif st.session_state.current_nav == "Longitudinal Trend":
-            # True historical records vs Illustrative Trajectory
             user_eval_history = [e for e in st.session_state.evaluation_history if e["id"] == selected_case]
             
             if len(user_eval_history) > 1:

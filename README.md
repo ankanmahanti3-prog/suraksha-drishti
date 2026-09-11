@@ -61,7 +61,7 @@ SURAKSHA-DRISHTI GATEWAY
 ### Installation
 ```bash
 # 1. Clone private repository
-git clone [https://github.com/](https://github.com/)<YOUR-USERNAME>/suraksha-drishti.git
+git clone https://github.com/ankanmahanti3-prog/suraksha-drishti.git
 cd suraksha-drishti
 
 # 2. Create and activate virtual environment
