@@ -1,4 +1,4 @@
-# SURAKSHA-DRISHTI
+# SURAKSHA-DRISHTI (सुरक्षा दृष्टि)
 ### AI-Assisted Personnel Welfare & Operational Stress-Risk System
 **Aligned with Ministry of Home Affairs (MHA) & CRPF Problem Statement ID: 26186**
 
@@ -37,9 +37,9 @@ SURAKSHA-DRISHTI GATEWAY
 ### Multi-Modal Feature Ingestion
 1. **Administrative Duty Profile (Mock HRMS):** Days elapsed since sanctioned leave, consecutive night-watch shifts (7-day window), operational hardship zone (Base vs. CI vs. High Altitude), and critical incident exposure.
 2. **Psychiatric Self-Screening (PHQ-4):** Integrates the ultra-brief, clinically validated GAD-2 (anxiety) and PHQ-2 (depression) standardized screeners.
-3. **Optional Facial rPPG Telemetry with Quality Gate:** Contactless optical pulse extraction via Green-channel chrominance analysis ($520\text{–}570\text{ nm}$ absorption peak) filtered through a 3rd-order Butterworth bandpass filter ($0.75\text{–}3.0\text{ Hz}$) with variance and signal-to-noise ratio verification.
+3. **Optional Facial rPPG Telemetry with Quality Gate:** Contactless optical pulse extraction via Green-channel chrominance analysis (520–570 nm absorption peak) filtered through a 3rd-order Butterworth bandpass filter (0.75–3.0 Hz) with variance and signal-to-noise ratio verification.
 4. **Voice Pitch Variability Proxy:** Frame-by-frame acoustic pitch period autocorrelation measuring vocal tract perturbation as a contextual physiological strain indicator.
-5. **Predictive Engine:** Local Random Forest Classifier computing risk indices ($0\text{ to }100$) mapped into actionable welfare bands.
+5. **Predictive Engine:** Local Random Forest Classifier computing risk indices (0 to 100) mapped into actionable welfare bands.
 6. **Explainable AI (XAI):** `shap.TreeExplainer` computing mathematical Shapley feature attributions dynamically per test profile.
 
 ---
@@ -72,29 +72,19 @@ python -m venv .venv
 # On macOS/Linux:
 source .venv/bin/activate
 
-# 3. Install dependencies
+# 3. Install pinned dependencies (scikit-learn is pinned to 1.9.0 to match the serialized model artifact)
 pip install -r requirements.txt
-# Note: scikit-learn is pinned to ==1.9.0 to match the serialized model artifact.
 
 # 4. Launch Air-Gapped Platform
 streamlit run app.py
 Demonstration Accounts (Role-Based Access)RoleService IDPINScope / PermissionsPersonnel (Elevated Check-in)P-100011234Full check-in, live telemetry scan, guided dialogue, self-help tools.Personnel (Balanced Baseline)P-100021234Nominal duty load view, check-in, guided breathing.Company CommanderC-200012345High-level fatigue grid, prototype roster rebalancing advisor.Unit Welfare OfficerW-300013456Live triage, evidence chains, SHAP XAI charts, simulated intervention routing.Security Negative TestP-99999*Access Denied — proves RBAC authentication check.
 ---
 
-### File 3: Update `requirements.txt`
+### Step 4: Final Git Commit & Repository Push
 
-Pin `scikit-learn` to the standard, compatible version (`1.3.2`) to protect model deserialization while keeping the remaining libraries stable.
+Stage, commit, and push these three updated files to your private GitHub repository:
 
-Open `requirements.txt`, replace its contents with:
-
-```text
-streamlit>=1.30.0
-opencv-python>=4.8.0
-sounddevice>=0.4.6
-scipy>=1.11.0
-pandas>=2.0.0
-numpy>=1.24.0
-scikit-learn==1.3.2
-joblib>=1.3.0
-shap>=0.43.0
-matplotlib>=3.7.0
+```bash
+git add voice_engine.py pulse_engine.py README.md
+git commit -m "chore: align standalone engine terminology to non-diagnostic proxies and remove outdated README version reference"
+git push origin main
