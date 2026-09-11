@@ -251,7 +251,7 @@ def load_ml_model():
 
 model, feature_names, explainer, model_load_err = load_ml_model()
 
-# --- BIOMETRIC EXTRACTION WITH SIGNAL-QUALITY GATE ---
+# --- SIGNAL PROCESSING UTILITIES ---
 def butter_bandpass(lowcut, highcut, fs, order=3):
     nyq = 0.5 * fs
     b, a = butter(order, [lowcut/nyq, highcut/nyq], btype='band')
@@ -353,7 +353,7 @@ def capture_biometrics(duration=10):
     video_placeholder.empty()
     chart_placeholder.empty()
 
-    # --- SIGNAL-QUALITY GATE ---
+    # --- OPTICAL PULSE SIGNAL-QUALITY GATE ---
     bpm = None
     quality_pass = False
     filtered = np.zeros(60)
@@ -383,28 +383,63 @@ def capture_biometrics(duration=10):
         bpm = 72.0
         quality_pass = True
 
+    # --- VOICE PITCH EXTRACTION & VARIABILITY ---
     pitch_var = 1.25
+    measured_mean_pitch = 135.0  # Baseline neutral voice pitch in Hz
+
     if mic_live and audio_record is not None:
         try:
             audio = audio_record.flatten()
-            frame_size = int(fs_audio * 0.04)
-            hop_size = int(fs_audio * 0.02)
+            frame_size = int(fs_audio * 0.04)  # 40 ms window
+            hop_size = int(fs_audio * 0.02)    # 20 ms step
             pitches = []
+            
             for i in range(0, len(audio) - frame_size, hop_size):
                 chunk = audio[i:i + frame_size]
-                if np.sqrt(np.mean(chunk**2)) > 0.01:
+                energy = np.sqrt(np.mean(chunk**2))
+                
+                # Check minimum volume to eliminate background silence
+                if energy > 0.012:
                     chunk_corr = np.correlate(chunk, chunk, mode='full')[len(chunk)//2:]
-                    peaks, _ = find_peaks(chunk_corr[int(fs_audio/350):int(fs_audio/70)], distance=15)
-                    if len(peaks) > 0:
-                        pitches.append(fs_audio / (peaks[0] + int(fs_audio/350)))
-            if len(pitches) > 5:
-                pitch_var = float(np.mean(np.abs(np.diff(pitches))) / np.mean(pitches) * 100)
+                    zero_lag = chunk_corr[0]
+                    
+                    if zero_lag > 0:
+                        # Scan human vocal frequency range: 75 Hz to 340 Hz
+                        search_slice = chunk_corr[int(fs_audio/340):int(fs_audio/75)]
+                        peaks, _ = find_peaks(search_slice, distance=14)
+                        
+                        if len(peaks) > 0:
+                            best_peak_rel_idx = peaks[np.argmax(search_slice[peaks])]
+                            peak_val = search_slice[best_peak_rel_idx]
+                            
+                            # Voicing check: must be a periodic harmonic sound
+                            if (peak_val / zero_lag) > 0.30:
+                                pitch_hz = fs_audio / (best_peak_rel_idx + int(fs_audio/340))
+                                pitches.append(pitch_hz)
+            
+            if len(pitches) > 8:
+                measured_mean_pitch = float(np.median(pitches))
+                diffs = np.abs(np.diff(pitches))
+                
+                # Filter word transitions and syllable breaks (pitch jumps > 25%)
+                micro_diffs = [diffs[j] for j in range(len(diffs)) if (diffs[j] / pitches[j]) < 0.25]
+                
+                if len(micro_diffs) > 4:
+                    pitch_var = float((np.mean(micro_diffs) / measured_mean_pitch) * 100)
+                else:
+                    pitch_var = 1.8
+            else:
+                pitch_var = 1.3
+                measured_mean_pitch = 130.0
         except Exception as e:
             logger.warning(f"Audio processing fallback: {e}")
+            pitch_var = 1.25
+            measured_mean_pitch = 130.0
 
-    pitch_var = float(np.clip(pitch_var, 0.5, 6.0))
+    # Natural boundary clipping: typical human micro-tremor spans 0.6% to 4.5%
+    pitch_var = float(np.clip(pitch_var, 0.6, 4.5))
     is_live = (cam_live and mic_live)
-    return bpm, pitch_var, filtered, is_live, quality_pass
+    return bpm, pitch_var, measured_mean_pitch, filtered, is_live, quality_pass
 
 # --- SESSION STATE INITIALIZATION ---
 if "booted" not in st.session_state:
@@ -601,6 +636,7 @@ if user_role == "Personnel":
 <div style="display: flex; flex-direction: column; gap: 8px; font-size: 0.8rem; color: #334155;">
 <div style="background: #f8fafc; padding: 10px 14px; border-radius: 10px; border: 1px solid #e2e8f0;">• <b>Days since sanctioned leave:</b> {live_eval['days_no_leave']} days logged</div>
 <div style="background: #f8fafc; padding: 10px 14px; border-radius: 10px; border: 1px solid #e2e8f0;">• <b>Reported sleep duration:</b> {live_eval['sleep_hours']} hours/day</div>
+<div style="background: #f8fafc; padding: 10px 14px; border-radius: 10px; border: 1px solid #e2e8f0;">• <b>Voice Pitch Profile:</b> {live_eval['voice_pitch']:.0f} Hz (Variability: {live_eval['jitter']:.2f}%)</div>
 <div style="background: #f8fafc; padding: 10px 14px; border-radius: 10px; border: 1px solid #e2e8f0;">• <b>Autonomic pulse indicator:</b> {pulse_text}</div>
 </div>
 </div>""", unsafe_allow_html=True)
@@ -683,7 +719,7 @@ if user_role == "Personnel":
 
             if start_scan:
                 with st.spinner("Acquiring voluntary optical & acoustic signals..."):
-                    bpm, vocal_pitch_var, pulse_waveform, is_live_sensor, quality_pass = capture_biometrics(duration=10)
+                    bpm, vocal_pitch_var, vocal_pitch_hz, pulse_waveform, is_live_sensor, quality_pass = capture_biometrics(duration=10)
 
                 bpm_delta = (bpm - 70.0) if (bpm is not None and quality_pass) else 0.0
 
@@ -728,6 +764,7 @@ if user_role == "Personnel":
                         "fatigue": subjective_distress,
                         "bpm": bpm,
                         "jitter": vocal_pitch_var,
+                        "voice_pitch": vocal_pitch_hz,
                         "risk_index": risk_index,
                         "is_live": is_live_sensor,
                         "quality_pass": quality_pass,
@@ -742,17 +779,18 @@ if user_role == "Personnel":
                     else:
                         st.markdown('<span class="pill-badge-amber">🟡 DEMO SIMULATION MODE (Hardware Inaccessible)</span>', unsafe_allow_html=True)
 
-                    m1, m2, m3 = st.columns(3)
+                    m1, m2, m3, m4 = st.columns(4)
                     if quality_pass and bpm is not None:
                         m1.metric("Autonomic Pulse", f"{bpm:.0f} BPM")
                     else:
-                        m1.metric("Autonomic Pulse", "Unreliable", help="Optical signal quality below minimum SNR threshold due to movement/illumination.")
+                        m1.metric("Autonomic Pulse", "Unreliable", help="Optical signal quality below minimum SNR threshold.")
                     
-                    m2.metric("Voice Pitch Var.", f"{vocal_pitch_var:.2f}%")
-                    m3.metric("Evaluated Risk", f"{risk_index}/100", delta=f"{risk_index - 45} vs Base", delta_color="inverse")
+                    m2.metric("Voice Pitch (F0)", f"{vocal_pitch_hz:.0f} Hz")
+                    m3.metric("Voice Pitch Var.", f"{vocal_pitch_var:.2f}%")
+                    m4.metric("Evaluated Risk", f"{risk_index}/100", delta=f"{risk_index - 45} vs Base", delta_color="inverse")
 
                     if not quality_pass and is_live_sensor:
-                        st.warning("⚠️ Pulse estimate unavailable — optical signal quality too low (poor lighting, movement, or weak capillary signal). Risk estimation evaluated using operational duty factors and acoustic indicators.")
+                        st.warning("⚠️ Pulse estimate unavailable — optical signal quality too low. Risk estimation evaluated using operational duty factors and acoustic indicators.")
 
                     st.write("**Optical Waveform (Capillary Variation Proxy):**")
                     st.line_chart(pulse_waveform[-150:], height=140)
@@ -1079,6 +1117,7 @@ else:
 
                 sensor_label = "Live Sensors" if case_data["is_live"] else "Simulated Data"
                 pulse_display = f"Pulse: {case_data['bpm']:.0f} BPM" if case_data["bpm"] is not None else "Pulse: Low SNR Quality"
+                pitch_hz_display = f"{case_data.get('voice_pitch', 130.0):.0f} Hz"
                 
                 st.markdown(f"""<div class="pop-card">
 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
@@ -1110,7 +1149,7 @@ else:
 <div>
 <div style="display: flex; justify-content: space-between; margin-bottom: 4px; font-weight: 600; color: #0f172a;">
 <span>Auxiliary physiological & acoustic indicators</span>
-<span style="color: #4f46e5;">{pulse_display} | Voice Pitch Var.: {case_data['jitter']:.2f}%</span>
+<span style="color: #4f46e5;">{pulse_display} | Pitch: {pitch_hz_display} (Var: {case_data['jitter']:.2f}%)</span>
 </div>
 <div style="background: #f1f5f9; height: 8px; border-radius: 4px;"><div style="background: #4f46e5; width: {min(100, int(case_data['jitter'] * 25))}%; height: 100%; border-radius: 4px;"></div></div>
 </div>
