@@ -362,7 +362,6 @@ def capture_biometrics(duration=10):
         raw_sig = np.array(green_signals)
         sig_variance = float(np.var(raw_sig))
         
-        # Quality Gate 1: Check variance (non-flat signal)
         if sig_variance > 0.05:
             detrended = raw_sig - np.mean(raw_sig)
             filtered = safe_bandpass_filter(detrended, lowcut=0.75, highcut=3.0, fs=effective_fps)
@@ -375,18 +374,15 @@ def capture_biometrics(duration=10):
                 peak_power = fft_vals[peak_idx]
                 mean_noise = np.mean(fft_vals[valid_idx])
                 
-                # Quality Gate 2: Signal-to-noise peak ratio > 1.8
                 if mean_noise > 0 and (peak_power / mean_noise) > 1.8:
                     peak_freq = fft_freqs[peak_idx]
                     bpm = float(np.clip(peak_freq * 60.0, 50.0, 160.0))
                     quality_pass = True
     elif not cam_live:
-        # Transparent simulation mode value
         filtered = np.sin(np.linspace(0, 10, 60))
         bpm = 72.0
         quality_pass = True
 
-    # Vocal pitch variability estimation
     pitch_var = 1.25
     if mic_live and audio_record is not None:
         try:
@@ -422,8 +418,9 @@ if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 if "chat_strain_detected" not in st.session_state:
     st.session_state.chat_strain_detected = False
-if "chat_summary_note" not in st.session_state:
-    st.session_state.chat_summary_note = "Awaiting voluntary personnel dialogue session."
+# Per-personnel dialogue storage dictionary
+if "personnel_dialogue_notes" not in st.session_state:
+    st.session_state.personnel_dialogue_notes = {}
 if "live_evaluations" not in st.session_state:
     st.session_state.live_evaluations = {}
 if "evaluation_history" not in st.session_state:
@@ -682,7 +679,6 @@ if user_role == "Personnel":
             st.markdown("<h3 style='font-size: 1rem; font-weight: 700; color: #0f172a; margin-bottom: 4px;'>4. Optional Auxiliary Telemetry</h3>", unsafe_allow_html=True)
             st.caption("Non-diagnostic, consent-backed optical pulse and voice acoustic perturbation estimation.")
             
-            # Explicit Opt-in: Unchecked by default
             consent = st.checkbox("I voluntarily consent to temporary optical/acoustic check-in.", value=False)
             start_scan = st.button("🚀 INITIATE VOLUNTARY CHECK-IN", type="primary", use_container_width=True, disabled=not consent)
 
@@ -690,7 +686,6 @@ if user_role == "Personnel":
                 with st.spinner("Acquiring voluntary optical & acoustic signals..."):
                     bpm, vocal_pitch_var, pulse_waveform, is_live_sensor, quality_pass = capture_biometrics(duration=10)
 
-                # Graceful pulse delta handling if optical quality fails
                 bpm_delta = (bpm - 70.0) if (bpm is not None and quality_pass) else 0.0
 
                 hardship_map = {"Peace Station / Standard Base": 0, "Counter-Insurgency / High Hardship": 1, "Extreme High Altitude": 2}
@@ -819,9 +814,12 @@ if user_role == "Personnel":
                         
                         has_severe = any(w in lower_reply for w in severe_lexicon)
                         
+                        # Store note specific to this logged-in personnel ID
                         if has_distress:
                             st.session_state.chat_strain_detected = True
-                            st.session_state.chat_summary_note = f"Personnel notes sleep fragmentation, fatigue, or social disconnect ('{user_reply[:60]}...'). Recommend priority leave review and informal peer check."
+                            st.session_state.personnel_dialogue_notes[curr_id] = f"Personnel notes sleep fragmentation, fatigue, or social disconnect ('{user_reply[:60]}...'). Recommend priority leave review and informal peer check."
+                        elif curr_id not in st.session_state.personnel_dialogue_notes:
+                            st.session_state.personnel_dialogue_notes[curr_id] = f"Personnel completed dialogue check-in. Reports manageable strain tolerance ('{user_reply[:60]}...')."
                         
                         if has_severe:
                             st.error("🚨 CRITICAL WELFARE TRIGGER: Please connect immediately with the 24x7 Force Counselor desk or Tele-MANAS (14416). Confidential assistance is ready.")
@@ -836,7 +834,8 @@ if user_role == "Personnel":
                     st.session_state.chat_step = 0
                     st.session_state.chat_history = []
                     st.session_state.chat_strain_detected = False
-                    st.session_state.chat_summary_note = "Awaiting voluntary personnel dialogue session."
+                    if curr_id in st.session_state.personnel_dialogue_notes:
+                        del st.session_state.personnel_dialogue_notes[curr_id]
                     st.rerun()
 
             else:
@@ -851,7 +850,6 @@ if user_role == "Personnel":
                     st.session_state.chat_step = 0
                     st.session_state.chat_history = []
                     st.session_state.chat_strain_detected = False
-                    st.session_state.chat_summary_note = "Awaiting voluntary personnel dialogue session."
                     st.rerun()
 
             st.markdown('</div>', unsafe_allow_html=True)
@@ -918,12 +916,12 @@ if user_role == "Personnel":
 </div>
 </div>
 <div style="margin-top: 20px;">
-<p style="font-size: 0.8rem; font-weight: 600; color: #0f172a; margin-bottom: 8px;">Request Unit Counselor Check-in (Prototype Routing):</p>
+<p style="font-size: 0.8rem; font-weight: 600; color: #0f172a; margin-bottom: 8px;">Request Unit Counselor Check-in (Prototype Workflow):</p>
 </div>
 </div>""", unsafe_allow_html=True)
 
             if st.button("🤝 Request Unit Counselor Follow-up (Prototype Action)", type="primary", use_container_width=True):
-                st.success("✅ Prototype Action Logged: Request queued for Welfare Officer review. (Simulated routing).")
+                st.success("✅ Prototype Workflow Action Logged: Request recorded in session state for Welfare Officer review. (Simulated prototype action).")
 
 # ==================== 2. COMMANDER PORTAL ==================== #
 elif user_role == "Commander":
@@ -1065,9 +1063,14 @@ else:
 </div>
 </div>""", unsafe_allow_html=True)
 
+                # Fetch only this selected personnel's dialogue summary
+                selected_note = st.session_state.personnel_dialogue_notes.get(
+                    selected_case, 
+                    "No voluntary guided dialogue recorded for this personnel profile during the current session."
+                )
                 st.markdown(f"""<div class="pop-card">
-<div style="font-size: 0.88rem; font-weight: 700; color: #4f46e5; margin-bottom: 8px;">💬 Conversational Screening Summary</div>
-<p style="font-size: 0.8rem; color: #334155; line-height: 1.5; margin: 0;">{st.session_state.chat_summary_note}</p>
+<div style="font-size: 0.88rem; font-weight: 700; color: #4f46e5; margin-bottom: 8px;">💬 Conversational Screening Summary ({selected_case})</div>
+<p style="font-size: 0.8rem; color: #334155; line-height: 1.5; margin: 0;">{selected_note}</p>
 </div>""", unsafe_allow_html=True)
 
             with w_right:
@@ -1118,17 +1121,17 @@ else:
 </div>""", unsafe_allow_html=True)
 
                 st.markdown('<div class="pop-card">', unsafe_allow_html=True)
-                st.markdown("<h3 style='font-size: 0.95rem; font-weight: 800; color: #0f172a; margin-bottom: 12px;'>Recommended Welfare Actions</h3>", unsafe_allow_html=True)
+                st.markdown("<h3 style='font-size: 0.95rem; font-weight: 800; color: #0f172a; margin-bottom: 12px;'>Recommended Welfare Actions (Prototype Workflow)</h3>", unsafe_allow_html=True)
                 b1, b2, b3 = st.columns(3)
                 with b1:
                     if b1.button("🏖️ Priority Leave", use_container_width=True, type="primary"):
-                        st.success(f"Leave advisory generated for {selected_case}. (Prototype routing).")
+                        st.success(f"Leave advisory generated for {selected_case}. (Simulated prototype action — no external dispatch).")
                 with b2:
                     if b2.button("👥 Buddy System", use_container_width=True, type="primary"):
-                        st.info(f"Designated peer buddy notified for an informal welfare check-in with {selected_case}.")
+                        st.info(f"Designated peer buddy notified for an informal welfare check-in with {selected_case}. (Simulated prototype action).")
                 with b3:
                     if b3.button("📞 Tele-Counseling", use_container_width=True, type="primary"):
-                        st.success(f"Tele-counseling referral recommended for {selected_case}.")
+                        st.success(f"Tele-counseling referral recommended for {selected_case}. (Simulated prototype action).")
                 st.caption("⚠️ Authorised human review required: AI output is advisory — final decision by Welfare Officer.")
                 st.markdown('</div>', unsafe_allow_html=True)
 
@@ -1214,7 +1217,7 @@ st.markdown("""<div style="background: #ffffff; border: 1px solid #e2e8f0; borde
 <b style="color:#0f172a;">SURAKSHA-DRISHTI</b> | AI-Assisted Personnel Welfare & Stress-Risk System (MHA PS ID: 26186)
 </div>
 <div>
-Prototype running locally; designed for air-gapped edge deployment. Trained on a synthetic longitudinal cohort for feasibility demonstration.
+Prototype running locally; designed for air-gapped edge deployment. Trained on a synthetic personnel-risk dataset for pipeline feasibility demonstration (ROC-AUC: 0.941 on synthetic validation split).
 </div>
 <div style="display: flex; gap: 14px; font-weight: 600;">
 <span>🔒 Privacy-first</span>

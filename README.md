@@ -1,4 +1,4 @@
-# SURAKSHA-DRISHTI (सुरक्षा दृष्टि)
+# SURAKSHA-DRISHTI
 ### AI-Assisted Personnel Welfare & Operational Stress-Risk System
 **Aligned with Ministry of Home Affairs (MHA) & CRPF Problem Statement ID: 26186**
 
@@ -13,8 +13,8 @@ SURAKSHA-DRISHTI is an early-warning, multi-tier decision-support platform desig
 
 ### Key Architectural Firewalls
 * **Non-Disciplinary Data Firewall:** All voluntary screenings, acoustic telemetry, and self-assessment dialogues are strictly firewalled from Annual Confidential Reports (ACRs), seniority evaluations, and promotional boards.
-* **Role-Based Information Masking:** Company Commanders only view aggregated unit strain distributions and operational rosters; confidential personal reflections and evidence chains are accessible solely by authorized Medical / Unit Welfare Officers.
-* **Air-Gapped Local Edge Runtime:** Engineered to operate completely offline on edge hardware without reliance on external commercial cloud infrastructures.
+* **Role-Based Portal Isolation (Prototype):** Company Commanders only view aggregated unit strain distributions and operational rosters; confidential personal reflections and evidence chains are accessible solely by authorized Medical / Unit Welfare Officers.
+* **Air-Gapped Local Edge Runtime:** Engineered to operate completely offline on edge hardware without external web font imports or commercial cloud infrastructures.
 
 ---
 
@@ -26,18 +26,18 @@ SURAKSHA-DRISHTI GATEWAY
 [Personnel Portal]        [Commander Portal]       [Welfare Officer Portal]
 • Authorised HRMS Duty    • Unit Workload Grid     • Dynamic Case Triage
 • Standardized PHQ-4      • Fatigue Distribution   • Dynamic SHAP Local XAI
-• Contactless rPPG Pulse  • AI Rebalancing Advisor • 30-Day Longitudinal Trend
-• Voice Pitch Variation   • Human-in-the-Loop Sign • Confidential Referral Dispatch
-• Adaptive AI Dialogue
+• Contactless rPPG Pulse  • AI Rebalancing Advisor • In-Session Trajectory Tracking
+• Voice Pitch Variation   • Human-in-the-Loop Sign • Simulated Workflow Dispatch
+• Guided Welfare Dialogue
 • 4-4-4-4 Box Breathing
 ---
 
 ## 3. Algorithmic & Telemetry Methodology
 
 ### Multi-Modal Feature Ingestion
-1. **Administrative HRMS Strain Markers:** Days elapsed since sanctioned leave, consecutive night-watch shifts (7-day window), operational hardship zone (Base vs. CI vs. High Altitude), and critical incident exposure.
+1. **Administrative Duty Profile (Mock HRMS):** Days elapsed since sanctioned leave, consecutive night-watch shifts (7-day window), operational hardship zone (Base vs. CI vs. High Altitude), and critical incident exposure.
 2. **Psychiatric Self-Screening (PHQ-4):** Integrates the ultra-brief, clinically validated GAD-2 (anxiety) and PHQ-2 (depression) standardized screeners.
-3. **Optional Facial rPPG Telemetry:** Contactless optical pulse extraction via Green-channel chrominance analysis ($520\text{–}570\text{ nm}$ absorption peak) filtered through a 3rd-order Butterworth bandpass filter ($0.75\text{–}3.0\text{ Hz}$).
+3. **Optional Facial rPPG Telemetry with Quality Gate:** Contactless optical pulse extraction via Green-channel chrominance analysis ($520\text{–}570\text{ nm}$ absorption peak) filtered through a 3rd-order Butterworth bandpass filter ($0.75\text{–}3.0\text{ Hz}$) with variance and signal-to-noise ratio verification.
 4. **Voice Pitch Variability Proxy:** Frame-by-frame acoustic pitch period autocorrelation measuring vocal tract perturbation as a contextual physiological strain indicator.
 5. **Predictive Engine:** Local Random Forest Classifier computing risk indices ($0\text{ to }100$) mapped into actionable welfare bands.
 6. **Explainable AI (XAI):** `shap.TreeExplainer` computing mathematical Shapley feature attributions dynamically per test profile.
@@ -46,9 +46,10 @@ SURAKSHA-DRISHTI GATEWAY
 
 ## 4. Scientific Methodology & Dataset Scope
 
-* **Prototype Dataset Notice:** The machine learning model is trained on a synthetic longitudinal personnel dataset designed to demonstrate pipeline feasibility, multi-modal feature fusion, and SHAP interpretability.
-* **Operational Calibration Notice:** The reported ROC-AUC demonstrates technical convergence on the synthesized cohort. Real-world force deployment requires authorized institutional records for final operational calibration and clinical validation.
-* **Telemetry Context:** Optical pulse and acoustic pitch variations represent auxiliary autonomic signals and are never interpreted in isolation as standalone psychological determinants.
+* **Prototype Dataset Scope:** The machine learning model is trained on a **synthetic personnel-risk dataset** (2,500 synthesized independent duty profiles) engineered to validate multi-modal feature fusion, inference pipelines, and SHAP explainability. It does not consist of real historical clinical records.
+* **ROC-AUC Metric Notice:** The model's validation performance score of **0.941 ROC-AUC** reflects mathematical convergence on the synthetic prototype dataset. It must **not** be interpreted as clinical accuracy, real-world accuracy, or operational military prediction accuracy. Real-world deployment requires authorized longitudinal institutional records for domain calibration.
+* **Telemetry Context:** Optical pulse estimates and acoustic pitch variations are non-diagnostic, contextual proxies and are never evaluated as standalone psychiatric determinants.
+* **Simulated Workflow Actions:** Intervention routing buttons (leave reviews, buddy systems, counseling requests) represent simulated prototype workflows for demonstration purposes.
 
 ---
 
@@ -61,7 +62,7 @@ SURAKSHA-DRISHTI GATEWAY
 ### Installation
 ```bash
 # 1. Clone private repository
-git clone https://github.com/ankanmahanti3-prog/suraksha-drishti.git
+git clone [https://github.com/ankanmahanti3-prog/suraksha-drishti.git](https://github.com/ankanmahanti3-prog/suraksha-drishti.git)
 cd suraksha-drishti
 
 # 2. Create and activate virtual environment
@@ -71,8 +72,28 @@ python -m venv .venv
 # On macOS/Linux:
 source .venv/bin/activate
 
-# 3. Install clean dependencies
+# 3. Install dependencies
 pip install -r requirements.txt
 
 # 4. Launch Air-Gapped Platform
 streamlit run app.py
+Demonstration Accounts (Role-Based Access)RoleService IDPINScope / PermissionsPersonnel (Elevated Check-in)P-100011234Full check-in, live telemetry scan, guided dialogue, self-help tools.Personnel (Balanced Baseline)P-100021234Nominal duty load view, check-in, guided breathing.Company CommanderC-200012345High-level fatigue grid, prototype roster rebalancing advisor.Unit Welfare OfficerW-300013456Live triage, evidence chains, SHAP XAI charts, simulated intervention routing.Security Negative TestP-99999*Access Denied — proves RBAC authentication check.
+---
+
+### File 3: Update `requirements.txt`
+
+Pin `scikit-learn` to the standard, compatible version (`1.3.2`) to protect model deserialization while keeping the remaining libraries stable.
+
+Open `requirements.txt`, replace its contents with:
+
+```text
+streamlit>=1.30.0
+opencv-python>=4.8.0
+sounddevice>=0.4.6
+scipy>=1.11.0
+pandas>=2.0.0
+numpy>=1.24.0
+scikit-learn==1.3.2
+joblib>=1.3.0
+shap>=0.43.0
+matplotlib>=3.7.0
