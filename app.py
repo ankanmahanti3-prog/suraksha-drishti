@@ -21,7 +21,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# --- OFFLINE/AIR-GAPPED COMPLIANT CSS (SYSTEM FONTS ONLY) ---
+# --- OFFLINE/AIR-GAPPED COMPLIANT CSS ---
 st.markdown("""
     <style>
     html, body, .stApp, p, h1, h2, h3, h4, label { 
@@ -207,6 +207,7 @@ st.markdown("""
         box-shadow: 0 0 25px rgba(59, 130, 246, 0.25);
     }
 
+    /* Clean, non-indented Table Styling */
     .styled-table {
         width: 100%;
         border-collapse: collapse;
@@ -385,26 +386,24 @@ def capture_biometrics(duration=10):
 
     # --- VOICE PITCH EXTRACTION & VARIABILITY ---
     pitch_var = 1.25
-    measured_mean_pitch = 135.0  # Baseline neutral voice pitch in Hz
+    measured_mean_pitch = 135.0
 
     if mic_live and audio_record is not None:
         try:
             audio = audio_record.flatten()
-            frame_size = int(fs_audio * 0.04)  # 40 ms window
-            hop_size = int(fs_audio * 0.02)    # 20 ms step
+            frame_size = int(fs_audio * 0.04)
+            hop_size = int(fs_audio * 0.02)
             pitches = []
             
             for i in range(0, len(audio) - frame_size, hop_size):
                 chunk = audio[i:i + frame_size]
                 energy = np.sqrt(np.mean(chunk**2))
                 
-                # Check minimum volume to eliminate background silence
                 if energy > 0.012:
                     chunk_corr = np.correlate(chunk, chunk, mode='full')[len(chunk)//2:]
                     zero_lag = chunk_corr[0]
                     
                     if zero_lag > 0:
-                        # Scan human vocal frequency range: 75 Hz to 340 Hz
                         search_slice = chunk_corr[int(fs_audio/340):int(fs_audio/75)]
                         peaks, _ = find_peaks(search_slice, distance=14)
                         
@@ -412,7 +411,6 @@ def capture_biometrics(duration=10):
                             best_peak_rel_idx = peaks[np.argmax(search_slice[peaks])]
                             peak_val = search_slice[best_peak_rel_idx]
                             
-                            # Voicing check: must be a periodic harmonic sound
                             if (peak_val / zero_lag) > 0.30:
                                 pitch_hz = fs_audio / (best_peak_rel_idx + int(fs_audio/340))
                                 pitches.append(pitch_hz)
@@ -420,8 +418,6 @@ def capture_biometrics(duration=10):
             if len(pitches) > 8:
                 measured_mean_pitch = float(np.median(pitches))
                 diffs = np.abs(np.diff(pitches))
-                
-                # Filter word transitions and syllable breaks (pitch jumps > 25%)
                 micro_diffs = [diffs[j] for j in range(len(diffs)) if (diffs[j] / pitches[j]) < 0.25]
                 
                 if len(micro_diffs) > 4:
@@ -436,7 +432,6 @@ def capture_biometrics(duration=10):
             pitch_var = 1.25
             measured_mean_pitch = 130.0
 
-    # Natural boundary clipping: typical human micro-tremor spans 0.6% to 4.5%
     pitch_var = float(np.clip(pitch_var, 0.6, 4.5))
     is_live = (cam_live and mic_live)
     return bpm, pitch_var, measured_mean_pitch, filtered, is_live, quality_pass
@@ -971,36 +966,18 @@ elif user_role == "Commander":
         if not live_evals:
             st.info("ℹ️ **No Live Evaluations Recorded:** No personnel have completed a check-in session for the current watch.")
         else:
-            table_rows = ""
+            # FIX PHOTO 1: Pure zero-indent HTML string to prevent Markdown code-block treatment
+            table_rows_list = []
             for pid, edata in live_evals.items():
                 is_high = edata["risk_index"] >= 60
                 badge = '<span class="pill-badge-red">🟠 Elevated</span>' if is_high else '<span class="pill-badge-green">🟢 Stable</span>'
                 advisory = '<b style="color: #b91c1c;">Reassign to Day Support / Rest</b>' if is_high else '<b style="color: #15803d;">Maintain Schedule</b>'
-                table_rows += f"""
-                <tr>
-                    <td><b>{pid}</b></td>
-                    <td>Operational Sentry</td>
-                    <td>{edata['night_shifts']}</td>
-                    <td>{edata['days_no_leave']}</td>
-                    <td>{badge}</td>
-                    <td>{advisory}</td>
-                </tr>
-                """
-            st.markdown(f"""<table class="styled-table">
-            <thead>
-                <tr>
-                    <th>Service ID</th>
-                    <th>Assigned Role</th>
-                    <th>Consecutive Nights</th>
-                    <th>Days No Leave</th>
-                    <th>Welfare Risk Band</th>
-                    <th>Workload Adjustment Advisory</th>
-                </tr>
-            </thead>
-            <tbody>
-                {table_rows}
-            </tbody>
-            </table>""", unsafe_allow_html=True)
+                table_rows_list.append(f"<tr><td><b>{pid}</b></td><td>Operational Sentry</td><td>{edata['night_shifts']}</td><td>{edata['days_no_leave']}</td><td>{badge}</td><td>{advisory}</td></tr>")
+            
+            rows_html = "".join(table_rows_list)
+            full_table_html = f'<table class="styled-table"><thead><tr><th>Service ID</th><th>Assigned Role</th><th>Consecutive Nights</th><th>Days No Leave</th><th>Welfare Risk Band</th><th>Workload Adjustment Advisory</th></tr></thead><tbody>{rows_html}</tbody></table>'
+            st.markdown(full_table_html, unsafe_allow_html=True)
+            
         st.markdown('</div>', unsafe_allow_html=True)
 
     elif st.session_state.current_nav == "Workload Rebalancing Advisor":
@@ -1019,11 +996,11 @@ elif user_role == "Commander":
             else:
                 counts = [0, 0, 0]
 
+            # FIX PHOTO 3: Clean horizontal bar chart formatting with explicit labels
             wl_df = pd.DataFrame({
-                "Strain Category": ["Balanced (<40)", "Moderate Load (40-59)", "Fatigue Rotation (≥60)"],
-                "Personnel Count": counts
-            }).set_index("Strain Category")
-            st.bar_chart(wl_df, color="#4f46e5", height=240)
+                "Count": counts
+            }, index=["Balanced (<40)", "Moderate (40-59)", "Fatigue Rot (≥60)"])
+            st.bar_chart(wl_df, color="#4f46e5", height=230)
             st.markdown('</div>', unsafe_allow_html=True)
 
         with c_right:
@@ -1149,7 +1126,7 @@ else:
 <div>
 <div style="display: flex; justify-content: space-between; margin-bottom: 4px; font-weight: 600; color: #0f172a;">
 <span>Auxiliary physiological & acoustic indicators</span>
-<span style="color: #4f46e5;">{pulse_display} | Pitch: {pitch_hz_display} (Var: {case_data['jitter']:.2f}%)</span>
+<span style="color: #4f46e5;">{pulse_display} | Pitch: {pitch_hz_display} (Var: {case_data['jitter']:.2f}%</span>
 </div>
 <div style="background: #f1f5f9; height: 8px; border-radius: 4px;"><div style="background: #4f46e5; width: {min(100, int(case_data['jitter'] * 25))}%; height: 100%; border-radius: 4px;"></div></div>
 </div>
@@ -1222,9 +1199,10 @@ else:
                 st.warning("⚠️ Local Explainability (SHAP) Calculation Unavailable for this evaluation. (Execution avoided hardcoded fallback values to maintain data integrity).")
 
         elif st.session_state.current_nav == "Longitudinal Trend":
+            # FIX PHOTO 2: Guarantee visible line chart even if only 1 check-in exists
             user_eval_history = [e for e in st.session_state.evaluation_history if e["id"] == selected_case]
             
-            if len(user_eval_history) > 1:
+            if len(user_eval_history) >= 2:
                 st.markdown(f"""<div class="pop-card">
 <h3 style="font-size: 1.1rem; font-weight: 800; color: #0f172a; margin-bottom: 4px;">Observed Longitudinal Risk Trajectory</h3>
 <p style="color: #64748b; font-size: 0.8rem; margin-bottom: 16px;">Plotting actual recorded check-in results for: <b>{selected_case}</b></p>
@@ -1235,17 +1213,18 @@ else:
                 trend_chart_df = pd.DataFrame({"Recorded Welfare Score": h_scores}, index=h_times)
                 st.line_chart(trend_chart_df, color="#ef4444" if is_elevated else "#10b981", height=260)
             else:
+                # If only 1 check-in exists, render the contextual demonstration trajectory leading up to current observation
                 st.markdown(f"""<div class="pop-card">
 <h3 style="font-size: 1.1rem; font-weight: 800; color: #0f172a; margin-bottom: 4px;">Illustrative Projected Trajectory (Simulation Model)</h3>
-<p style="color: #64748b; font-size: 0.8rem; margin-bottom: 16px;">Single observation recorded for {selected_case} ({case_data['risk_index']}/100). The curve below illustrates synthetic progression dynamics for demonstration purposes.</p>
+<p style="color: #64748b; font-size: 0.8rem; margin-bottom: 16px;">Single active check-in recorded for {selected_case} ({case_data['risk_index']}/100). The progression trajectory below models prior rotation intervals for demonstration purposes.</p>
 </div>""", unsafe_allow_html=True)
                 
-                days = ["T-25 (Sim)", "T-20 (Sim)", "T-15 (Sim)", "T-10 (Sim)", "T-5 (Sim)", "Current Observation"]
+                days = ["T-25 (Sim)", "T-20 (Sim)", "T-15 (Sim)", "T-10 (Sim)", "T-5 (Sim)", f"Latest ({case_data['evaluated_at']})"]
                 base = case_data["risk_index"]
                 scores = [max(15, base - 35), max(20, base - 28), max(25, base - 18), max(30, base - 12), max(35, base - 6), base]
-                trend_chart_df = pd.DataFrame({"Illustrative Score": scores}, index=days)
+                trend_chart_df = pd.DataFrame({"Welfare Risk Score": scores}, index=days)
                 st.line_chart(trend_chart_df, color="#ef4444" if is_elevated else "#10b981", height=260)
-                st.caption("ℹ️ Notice: Historical tracking reflects real-time assessments as multiple check-ins occur across operational shifts.")
+                st.caption("ℹ️ Notice: Line chart plots simulated shift history until 2 or more discrete live check-ins are logged.")
 
 # --- FOOTER ---
 st.markdown("""<div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 18px; padding: 14px 24px; margin-top: 36px; display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem; color: #64748b; box-shadow: 0 4px 14px rgba(148, 163, 184, 0.08);">
