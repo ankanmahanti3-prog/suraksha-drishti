@@ -15,7 +15,7 @@ logger = logging.getLogger("SurakshaDrishti")
 
 # --- PAGE CONFIGURATION ---
 st.set_page_config(
-    page_title="SURAKSHA-DRISHTI | AI Personnel Welfare Platform",
+    page_title="SURAKSHA-DRISHTI | Personnel Welfare Intelligence",
     page_icon="🛡️",
     layout="wide",
     initial_sidebar_state="collapsed"
@@ -51,11 +51,11 @@ st.markdown("""
         justify-content: space-between;
         align-items: center;
         background: #ffffff !important;
-        padding: 14px 28px !important;
+        padding: 16px 30px !important;
         border-radius: 20px !important;
         box-shadow: 0 6px 20px -4px rgba(148, 163, 184, 0.15) !important;
         border: 1px solid #e2e8f0 !important;
-        margin-bottom: 16px !important;
+        margin-bottom: 18px !important;
     }
 
     .radial-gauge {
@@ -207,7 +207,6 @@ st.markdown("""
         box-shadow: 0 0 25px rgba(59, 130, 246, 0.25);
     }
 
-    /* Clean, non-indented Table Styling */
     .styled-table {
         width: 100%;
         border-collapse: collapse;
@@ -442,6 +441,8 @@ if "booted" not in st.session_state:
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
     st.session_state.user = None
+if "selected_role_view" not in st.session_state:
+    st.session_state.selected_role_view = "PERSONNEL"
 if "chat_step" not in st.session_state:
     st.session_state.chat_step = 0
 if "chat_history" not in st.session_state:
@@ -466,7 +467,7 @@ if not st.session_state.booted:
 <p style="color: #4f46e5; font-size: 0.95rem; font-weight: 600; margin-bottom: 8px;">AI-Assisted Personnel Welfare & Stress-Risk Decision Support</p>
 <p style="font-size: 0.8rem; color: #64748b; margin-bottom: 24px;">Aligned with MHA CRPF Problem Statement ID: 26186 | Behavioral & Duty Analytics with Privacy Safeguards</p>
 <div style="border-top: 1px solid #edf2f7; padding-top: 20px;">
-<p style="font-size: 0.84rem; color: #334155; font-weight: 600; margin-bottom: 16px;">INITIALIZING SECURE PROTOTYPE ENVIRONMENT...</p>
+<p style="font-size: 0.84rem; color: #334155; font-weight: 600; margin-bottom: 16px;">INITIALIZING CONSOLIDATED SECURE WORKSPACE...</p>
 </div>
 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; text-align: left; font-size: 0.82rem; margin-bottom: 24px;">
 <div style="background: #f8fafc; padding: 12px 16px; border-radius: 12px; border: 1px solid #e2e8f0; color: #0f172a;">✓ Identity Services &nbsp;&nbsp;<b style="color: #16a34a;">Synthetic Mock Active</b></div>
@@ -492,7 +493,7 @@ if not st.session_state.authenticated:
 <div style="font-size: 2.5rem; margin-bottom: 10px;">🛡️</div>
 <h2 style="color: #0f172a; font-size: 1.6rem; font-weight: 800; margin-bottom: 4px;">SURAKSHA-DRISHTI</h2>
 <p style="color: #4f46e5; font-size: 0.9rem; font-weight: 600; margin-bottom: 2px;">Personnel Welfare Intelligence Platform</p>
-<p style="color: #64748b; font-size: 0.78rem;">Role-Based Portal Isolation for authorized personnel and medical officers</p>
+<p style="color: #64748b; font-size: 0.78rem;">Role-Based Portal Gateway for Authorized Personnel and Medical Officers</p>
 </div>""", unsafe_allow_html=True)
 
         with st.form(key="login_form", border=True):
@@ -507,18 +508,13 @@ if not st.session_state.authenticated:
                     st.session_state.authenticated = True
                     st.session_state.user = result
                     st.session_state.user_id = input_id.strip()
-                    if result["role"] == "Personnel":
-                        st.session_state.current_nav = "Home"
-                    elif result["role"] == "Commander":
-                        st.session_state.current_nav = "Workload Grid"
-                    else:
-                        st.session_state.current_nav = "Welfare Assessment Triage"
+                    st.session_state.selected_role_view = result["role"].upper()
                     st.rerun()
                 else:
                     st.error(result)
 
         st.markdown("""<div style="display: flex; justify-content: space-around; text-align: center; margin-top: 14px; font-size: 0.75rem; color: #64748b; font-weight: 600;">
-<div>👤 Role-Based Portal Isolation (Prototype)</div>
+<div>👤 Role-Based Portals</div>
 <div>🛡️ Non-Disciplinary Firewall</div>
 <div>⚙️ Local AI Processing</div>
 </div>
@@ -527,67 +523,93 @@ if not st.session_state.authenticated:
 </div>""", unsafe_allow_html=True)
     st.stop()
 
-# ==================== MAIN AUTHENTICATED WORKSPACE ==================== #
+# ==================== CONSOLIDATED DASHBOARD WRAPPER ==================== #
 user = st.session_state.user
-user_role = user["role"]
+curr_user_role = user["role"]
 
-if user_role == "Personnel":
-    role_nav_options = ["Home", "Voluntary Wellness Check-in", "Guided Welfare Dialogue", "Self-Help & Tactical Breathing"]
-elif user_role == "Commander":
-    role_nav_options = ["Workload Grid", "Workload Rebalancing Advisor"]
-else:
-    role_nav_options = ["Welfare Assessment Triage", "Dynamic XAI Analysis", "Longitudinal Trend"]
-
-if st.session_state.get("current_nav") not in role_nav_options:
-    st.session_state.current_nav = role_nav_options[0]
-
-# Top Navigation Bar
+# Top Header Card
 st.markdown(f"""<div class="top-header">
-<div style="display: flex; align-items: center; gap: 12px;">
-<span style="font-size: 1.6rem;">🛡️</span>
+<div style="display: flex; align-items: center; gap: 14px;">
+<span style="font-size: 1.8rem;">🛡️</span>
 <div>
-<div style="font-weight: 800; font-size: 1.15rem; color: #0f172a; line-height: 1.1;">SURAKSHA-DRISHTI</div>
-<div style="font-size: 0.72rem; color: #4f46e5; font-weight: 600;">AI-Assisted Personnel Welfare System</div>
+<div style="font-weight: 800; font-size: 1.25rem; color: #0f172a; line-height: 1.1;">SURAKSHA-DRISHTI</div>
+<div style="font-size: 0.75rem; color: #4f46e5; font-weight: 600;">Unified Personnel Welfare Monitoring Dashboard</div>
 </div>
 </div>
 <div style="display: flex; align-items: center; gap: 16px;">
 <div style="text-align: right;">
-<div style="font-size: 0.85rem; font-weight: 700; color: #0f172a;">{user['display_id']}</div>
-<div style="font-size: 0.72rem; color: #64748b;">Role: <b>{user_role}</b> | Unit: {user['unit']}</div>
+<div style="font-size: 0.88rem; font-weight: 700; color: #0f172a;">{user['display_id']}</div>
+<div style="font-size: 0.72rem; color: #64748b;">Active Role: <b>{curr_user_role}</b> | Unit: {user['unit']}</div>
 </div>
 <span class="pill-badge-green">AUTHENTICATED</span>
 </div>
 </div>""", unsafe_allow_html=True)
 
-nav_cols = st.columns([1] * len(role_nav_options) + [1.2])
-for i, opt in enumerate(role_nav_options):
-    is_active = (st.session_state.current_nav == opt)
+# --- 1. UNIFIED ROLE SELECTION BAR ---
+role_options = ["PERSONNEL", "COMMANDER", "WELFARE OFFICER"]
+col_roles = st.columns([1, 1, 1, 0.7])
+
+for idx, role_name in enumerate(role_options):
+    is_active = (st.session_state.selected_role_view == role_name)
     btn_type = "primary" if is_active else "secondary"
-    if nav_cols[i].button(opt, key=f"nav_btn_{i}", type=btn_type, use_container_width=True):
-        st.session_state.current_nav = opt
+    icon = "👤 " if role_name == "PERSONNEL" else ("🎖️ " if role_name == "COMMANDER" else "🩺 ")
+    if col_roles[idx].button(f"{icon}{role_name}", key=f"role_tab_{role_name}", type=btn_type, use_container_width=True):
+        st.session_state.selected_role_view = role_name
         st.rerun()
 
-if nav_cols[-1].button("🚪 Logout", key="logout_btn", use_container_width=True):
+if col_roles[3].button("🚪 Logout", key="logout_btn_top", use_container_width=True):
     st.session_state.authenticated = False
     st.session_state.user = None
-    st.session_state.current_nav = "Home"
+    st.session_state.selected_role_view = "PERSONNEL"
     st.rerun()
 
-st.markdown("""<div style="background: #ffffff; border: 1px solid #e2e8f0; border-left: 5px solid #4f46e5; border-radius: 14px; padding: 12px 20px; margin-bottom: 22px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 12px rgba(148, 163, 184, 0.08);">
+st.markdown("""<div style="background: #ffffff; border: 1px solid #e2e8f0; border-left: 5px solid #4f46e5; border-radius: 14px; padding: 10px 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 12px rgba(148, 163, 184, 0.08);">
 <span style="font-size: 0.82rem; color: #334155; font-weight: 600;">
 ⚖️ <b>Core Ethical Architecture:</b> <i>"AI identifies welfare-risk patterns; authorised humans decide interventions."</i>
 </span>
 <span style="font-size: 0.72rem; color: #64748b; font-weight: 600;">System provides predictive early-warning indicators, not clinical or psychiatric diagnoses.</span>
 </div>""", unsafe_allow_html=True)
 
-# ==================== 1. PERSONNEL PORTAL ==================== #
-if user_role == "Personnel":
+# Check RBAC Permission for the Selected View
+selected_view = st.session_state.selected_role_view
+requires_role_map = {
+    "PERSONNEL": "Personnel",
+    "COMMANDER": "Commander",
+    "WELFARE OFFICER": "Welfare Officer"
+}
+
+# Role Authorization Gate
+if curr_user_role != requires_role_map[selected_view]:
+    st.warning(f"🔒 **Role-Based Access Control Gate:** Active session authenticated as **{curr_user_role}**. Accessing the **{selected_view}** workspace requires authorized {selected_view.title()} credentials.")
+    with st.expander(f"🔑 Authenticate for {selected_view.title()} Portal", expanded=True):
+        with st.form(key=f"reauth_form_{selected_view}"):
+            re_id = st.text_input("Service ID", value="C-20001" if selected_view == "COMMANDER" else "W-30001")
+            re_pin = st.text_input("Access PIN", type="password")
+            if st.form_submit_button(f"Authenticate as {selected_view.title()} →"):
+                valid, result = authenticate_user(re_id.strip(), re_pin.strip())
+                if valid and result["role"] == requires_role_map[selected_view]:
+                    st.session_state.user = result
+                    st.session_state.user_id = re_id.strip()
+                    st.rerun()
+                else:
+                    st.error("Invalid credentials for this role.")
+    st.stop()
+
+# ==================== 2. PERSONNEL SECTION (CONSOLIDATED) ==================== #
+if selected_view == "PERSONNEL":
     curr_id = user["display_id"].split()[0]
     live_eval = st.session_state.live_evaluations.get(curr_id, None)
 
-    if st.session_state.current_nav == "Home":
-        col_left, col_right = st.columns([1.7, 1.3])
+    p_tab1, p_tab2, p_tab3, p_tab4 = st.tabs([
+        "📋 Overview & Duty Status",
+        "🚀 Voluntary Check-in & Telemetry",
+        "💬 Guided Welfare Dialogue",
+        "🫁 Self-Help & Tactical Breathing"
+    ])
 
+    # --- SUB-SECTION 1: OVERVIEW ---
+    with p_tab1:
+        col_left, col_right = st.columns([1.7, 1.3])
         with col_left:
             if live_eval:
                 current_score = live_eval["risk_index"]
@@ -638,7 +660,7 @@ if user_role == "Personnel":
             else:
                 st.markdown("""<div class="pop-card">
 <div style="font-size: 0.92rem; font-weight: 700; color: #0f172a; margin-bottom: 6px;">📋 Voluntary Welfare Check-in Pending</div>
-<p style="font-size: 0.8rem; color: #64748b; line-height: 1.5; margin: 0;">You have not logged a check-in for this rotation. Open the <b>Voluntary Wellness Check-in</b> tab to run the optical/acoustic check and submit your confidential self-assessment.</p>
+<p style="font-size: 0.8rem; color: #64748b; line-height: 1.5; margin: 0;">You have not logged a check-in for this rotation. Open the <b>Voluntary Check-in & Telemetry</b> tab to complete your check-in.</p>
 </div>""", unsafe_allow_html=True)
 
         with col_right:
@@ -663,10 +685,8 @@ if user_role == "Personnel":
 </div>
 </div>""", unsafe_allow_html=True)
 
-    # --- VIEW 2: VOLUNTARY CHECK-IN ---
-    elif st.session_state.current_nav == "Voluntary Wellness Check-in":
-        st.markdown(f'<div style="font-size: 1.15rem; font-weight: 800; color: #0f172a; margin-bottom: 16px;">Voluntary Wellness Self-Assessment | Pseudonymized ID: {user["display_id"]}</div>', unsafe_allow_html=True)
-
+    # --- SUB-SECTION 2: CHECK-IN & TELEMETRY ---
+    with p_tab2:
         col_form, col_telemetry = st.columns([1.1, 0.9])
         with col_form:
             st.markdown('<div class="pop-card">', unsafe_allow_html=True)
@@ -741,7 +761,7 @@ if user_role == "Personnel":
                         st.error(f"⚠️ Inference Error: {e}")
                         risk_index = None
                 else:
-                    st.error(f"⚠️ AI Risk Engine Unavailable: {model_load_err if model_load_err else 'Artifact not loaded'}. Evaluation halted to avoid generating unverified scores.")
+                    st.error(f"⚠️ AI Risk Engine Unavailable: {model_load_err if model_load_err else 'Artifact not loaded'}.")
                     risk_index = None
 
                 if risk_index is not None:
@@ -785,24 +805,21 @@ if user_role == "Personnel":
                     m4.metric("Evaluated Risk", f"{risk_index}/100", delta=f"{risk_index - 45} vs Base", delta_color="inverse")
 
                     if not quality_pass and is_live_sensor:
-                        st.warning("⚠️ Pulse estimate unavailable — optical signal quality too low. Risk estimation evaluated using operational duty factors and acoustic indicators.")
+                        st.warning("⚠️ Pulse estimate unavailable — optical signal quality too low.")
 
                     st.write("**Optical Waveform (Capillary Variation Proxy):**")
                     st.line_chart(pulse_waveform[-150:], height=140)
 
                     if risk_index >= 60:
                         st.error("⚠️ Elevated Welfare-Risk Pattern Identified")
-                        st.info("System Note: An advisory notification has been routed to the Unit Welfare Officer. (No disciplinary record initiated).")
+                        st.info("System Note: An advisory notification has been routed to the Unit Welfare Officer.")
                     else:
                         st.success("✅ Nominal Range: Operational Strain within Baseline Tolerances")
             st.markdown('</div>', unsafe_allow_html=True)
 
-    # --- VIEW 3: GUIDED WELFARE DIALOGUE ---
-    elif st.session_state.current_nav == "Guided Welfare Dialogue":
-        st.markdown(f'<div style="font-size: 1.15rem; font-weight: 800; color: #0f172a; margin-bottom: 16px;">Guided Welfare Dialogue (Rule-Assisted Triage) | Confidential for {user["display_id"]}</div>', unsafe_allow_html=True)
-
+    # --- SUB-SECTION 3: GUIDED DIALOGUE ---
+    with p_tab3:
         chat_col, guide_col = st.columns([1.3, 0.7])
-
         questions = [
             "Good day. I am the SURAKSHA-DRISHTI guided welfare companion. How has your sleep quality been over the past 48 hours? Are you waking up rested or experiencing persistent restlessness?",
             "Understood. During recent night duties or deployments, how manageable has your concentration and physical fatigue felt?",
@@ -816,7 +833,7 @@ if user_role == "Personnel":
 <span style="font-size:0.95rem; font-weight:700; color:#0f172a;">💬 Rule-Assisted Psychological Strain Screening</span>
 <span class="pill-badge-blue">CONVERSATIONAL TRIAGE</span>
 </div>
-<p style="font-size:0.78rem; color:#64748b; margin-bottom:16px;">This dialogue is confidential, non-punitive, and analyzed using local conversational triage rules. Answers are firewalled from disciplinary rosters.</p>""", unsafe_allow_html=True)
+<p style="font-size:0.78rem; color:#64748b; margin-bottom:16px;">This dialogue is confidential, non-punitive, and analyzed using local conversational triage rules.</p>""", unsafe_allow_html=True)
 
             for q_text, user_ans in st.session_state.chat_history:
                 st.markdown(f'<div class="chat-bubble-ai"><b>SURAKSHA AI:</b><br>{q_text}</div>', unsafe_allow_html=True)
@@ -825,7 +842,6 @@ if user_role == "Personnel":
             if st.session_state.chat_step < len(questions):
                 current_q = questions[st.session_state.chat_step]
                 st.markdown(f'<div class="chat-bubble-ai"><b>SURAKSHA AI:</b><br>{current_q}</div>', unsafe_allow_html=True)
-                
                 user_reply = st.text_area("Your Response:", key=f"reply_step_{st.session_state.chat_step}", placeholder="Type your observations here...")
                 
                 col_btn1, col_btn2 = st.columns([1, 1])
@@ -868,15 +884,8 @@ if user_role == "Personnel":
                     if curr_id in st.session_state.personnel_dialogue_notes:
                         del st.session_state.personnel_dialogue_notes[curr_id]
                     st.rerun()
-
             else:
                 st.success("✅ **Assessment Complete:** Thank you for completing your welfare dialogue.")
-                st.info("""
-                **Rule-Assisted Supportive Guidance:**
-                * Restorative sleep hygiene is recommended prior to your next operational watch.
-                * Consider utilizing the Combat Box Breathing tool or initiating a peer check-in.
-                * A confidential welfare summary note has been logged for Medical / Welfare Officer review.
-                """)
                 if st.button("Start New Dialogue ↺", use_container_width=True):
                     st.session_state.chat_step = 0
                     st.session_state.chat_history = []
@@ -889,18 +898,15 @@ if user_role == "Personnel":
             st.markdown("""<div class="pop-card">
 <div style="font-size:0.95rem; font-weight:800; color:#0f172a; margin-bottom:12px;">🛡️ Dialogue Privacy & Limits</div>
 <div style="font-size:0.8rem; color:#475569; line-height:1.6;">
-• <b>Rule-Based Prototype Engine:</b> Operates completely offline without external cloud LLM connections.<br>
-• <b>No Command Visibility:</b> Commanding Officers only view aggregated unit readiness rosters.<br>
-• <b>Non-Evaluative:</b> Dialogue responses will never affect your ACR, seniority, or weapons issue status.
+• <b>Rule-Based Prototype Engine:</b> Operates completely offline.<br>
+• <b>No Command Visibility:</b> Commanding Officers view only aggregated unit readiness rosters.<br>
+• <b>Non-Evaluative:</b> Dialogue responses will never affect your ACR, seniority, or promotional standing.
 </div>
 </div>""", unsafe_allow_html=True)
 
-    # --- VIEW 4: SELF-HELP & TACTICAL BREATHING ---
-    elif st.session_state.current_nav == "Self-Help & Tactical Breathing":
-        st.markdown(f'<div style="font-size: 1.15rem; font-weight: 800; color: #0f172a; margin-bottom: 16px;">Personnel Self-Help Resources & Support Tools | {user["display_id"]}</div>', unsafe_allow_html=True)
-
+    # --- SUB-SECTION 4: SELF HELP & BREATHING ---
+    with p_tab4:
         sh_left, sh_right = st.columns([1.1, 0.9])
-
         with sh_left:
             st.markdown("""<div class="pop-card">
 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
@@ -952,74 +958,67 @@ if user_role == "Personnel":
 </div>""", unsafe_allow_html=True)
 
             if st.button("🤝 Request Unit Counselor Follow-up (Prototype Action)", type="primary", use_container_width=True):
-                st.success("✅ Prototype Workflow Action Logged: Request recorded in session state for Welfare Officer review. (Simulated prototype action).")
+                st.success("✅ Prototype Workflow Action Logged: Request recorded in session state for Welfare Officer review.")
 
-# ==================== 2. COMMANDER PORTAL ==================== #
-elif user_role == "Commander":
+# ==================== 3. COMMANDER SECTION (CONSOLIDATED) ==================== #
+elif selected_view == "COMMANDER":
+    st.markdown(f"""<div class="pop-card">
+<h3 style="font-size: 1.15rem; font-weight: 800; color: #0f172a; margin-bottom: 2px;">Company Commander Operational Readiness Grid | {user['unit']}</h3>
+<p style="color: #64748b; font-size: 0.8rem; margin-bottom: 16px;">Aggregated operational workload indicators | Confidential clinical and survey responses are firewalled</p>""", unsafe_allow_html=True)
 
-    if st.session_state.current_nav == "Workload Grid":
-        st.markdown(f"""<div class="pop-card">
-<h3 style="font-size: 1.15rem; font-weight: 800; color: #0f172a; margin-bottom: 2px;">Personnel Welfare & Workload Risk Grid | {user['unit']}</h3>
-<p style="color: #64748b; font-size: 0.8rem; margin-bottom: 16px;">Aggregated operational workload indicators | Confidential clinical and survey responses are masked</p>""", unsafe_allow_html=True)
+    live_evals = st.session_state.live_evaluations
+    if not live_evals:
+        st.info("ℹ️ **No Live Evaluations Recorded:** No personnel have completed a check-in session for the current watch.")
+    else:
+        table_rows_list = []
+        for pid, edata in live_evals.items():
+            is_high = edata["risk_index"] >= 60
+            badge = '<span class="pill-badge-red">🟠 Elevated</span>' if is_high else '<span class="pill-badge-green">🟢 Stable</span>'
+            advisory = '<b style="color: #b91c1c;">Reassign to Day Support / Rest</b>' if is_high else '<b style="color: #15803d;">Maintain Schedule</b>'
+            table_rows_list.append(f"<tr><td><b>{pid}</b></td><td>Operational Sentry</td><td>{edata['night_shifts']}</td><td>{edata['days_no_leave']}</td><td>{badge}</td><td>{advisory}</td></tr>")
+        
+        rows_html = "".join(table_rows_list)
+        full_table_html = f'<table class="styled-table"><thead><tr><th>Service ID</th><th>Assigned Role</th><th>Consecutive Nights</th><th>Days No Leave</th><th>Welfare Risk Band</th><th>Workload Adjustment Advisory</th></tr></thead><tbody>{rows_html}</tbody></table>'
+        st.markdown(full_table_html, unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
-        live_evals = st.session_state.live_evaluations
-        if not live_evals:
-            st.info("ℹ️ **No Live Evaluations Recorded:** No personnel have completed a check-in session for the current watch.")
-        else:
-            # FIX PHOTO 1: Pure zero-indent HTML string to prevent Markdown code-block treatment
-            table_rows_list = []
-            for pid, edata in live_evals.items():
-                is_high = edata["risk_index"] >= 60
-                badge = '<span class="pill-badge-red">🟠 Elevated</span>' if is_high else '<span class="pill-badge-green">🟢 Stable</span>'
-                advisory = '<b style="color: #b91c1c;">Reassign to Day Support / Rest</b>' if is_high else '<b style="color: #15803d;">Maintain Schedule</b>'
-                table_rows_list.append(f"<tr><td><b>{pid}</b></td><td>Operational Sentry</td><td>{edata['night_shifts']}</td><td>{edata['days_no_leave']}</td><td>{badge}</td><td>{advisory}</td></tr>")
-            
-            rows_html = "".join(table_rows_list)
-            full_table_html = f'<table class="styled-table"><thead><tr><th>Service ID</th><th>Assigned Role</th><th>Consecutive Nights</th><th>Days No Leave</th><th>Welfare Risk Band</th><th>Workload Adjustment Advisory</th></tr></thead><tbody>{rows_html}</tbody></table>'
-            st.markdown(full_table_html, unsafe_allow_html=True)
-            
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    elif st.session_state.current_nav == "Workload Rebalancing Advisor":
-        c_left, c_right = st.columns([1.1, 0.9])
-        with c_left:
-            st.markdown("""<div class="pop-card">
+    c_left, c_right = st.columns([1.1, 0.9])
+    with c_left:
+        st.markdown("""<div class="pop-card">
 <h3 style="font-size: 1.05rem; font-weight: 800; color: #0f172a; margin-bottom: 4px;">Unit Workload Distribution</h3>
 <p style="color: #64748b; font-size: 0.78rem; margin-bottom: 14px;">Current headcount distribution across strain bands</p>""", unsafe_allow_html=True)
-            
-            live_evals = st.session_state.live_evaluations
-            if live_evals:
-                elevated_c = sum(1 for e in live_evals.values() if e["risk_index"] >= 60)
-                moderate_c = sum(1 for e in live_evals.values() if 40 <= e["risk_index"] < 60)
-                balanced_c = sum(1 for e in live_evals.values() if e["risk_index"] < 40)
-                counts = [balanced_c, moderate_c, elevated_c]
-            else:
-                counts = [0, 0, 0]
+        
+        if live_evals:
+            elevated_c = sum(1 for e in live_evals.values() if e["risk_index"] >= 60)
+            moderate_c = sum(1 for e in live_evals.values() if 40 <= e["risk_index"] < 60)
+            balanced_c = sum(1 for e in live_evals.values() if e["risk_index"] < 40)
+            counts = [balanced_c, moderate_c, elevated_c]
+        else:
+            counts = [0, 0, 0]
 
-            # FIX PHOTO 3: Clean horizontal bar chart formatting with explicit labels
-            wl_df = pd.DataFrame({
-                "Count": counts
-            }, index=["Balanced (<40)", "Moderate (40-59)", "Fatigue Rot (≥60)"])
-            st.bar_chart(wl_df, color="#4f46e5", height=230)
-            st.markdown('</div>', unsafe_allow_html=True)
+        wl_df = pd.DataFrame({
+            "Count": counts
+        }, index=["Balanced (<40)", "Moderate (40-59)", "Fatigue Rot (≥60)"])
+        st.bar_chart(wl_df, color="#4f46e5", height=230)
+        st.markdown('</div>', unsafe_allow_html=True)
 
-        with c_right:
-            st.markdown("""<div class="pop-card">
-<h3 style="font-size: 1.05rem; font-weight: 800; color: #0f172a; margin-bottom: 4px;">⚡ Roster Rebalancing Recommendation (Prototype Rule-Engine)</h3>
+    with c_right:
+        st.markdown("""<div class="pop-card">
+<h3 style="font-size: 1.05rem; font-weight: 800; color: #0f172a; margin-bottom: 4px;">⚡ Roster Rebalancing Recommendation (Rule-Engine)</h3>
 <p style="color: #64748b; font-size: 0.78rem; margin-bottom: 16px;">Generates advisory roster rotation proposals for elevated personnel. Final roster changes require authorized human approval.</p>""", unsafe_allow_html=True)
-            if live_evals:
-                high_risk_list = [pid for pid, e in live_evals.items() if e["risk_index"] >= 60]
-                if st.button("📋 Generate Prototype Recommendation", use_container_width=True, type="primary"):
-                    if high_risk_list:
-                        st.success(f"✅ Advisory Generated: Recommend rotating {', '.join(high_risk_list)} to Day Support / Mandatory Rest.")
-                    else:
-                        st.success("✅ Nominal Range: All active personnel are within baseline strain tolerance.")
-                    st.info("Decision Status: AI output is advisory — awaiting Company Commander sign-off.")
-            else:
-                st.caption("Awaiting personnel check-in data to generate rebalancing schedule.")
-            st.markdown('</div>', unsafe_allow_html=True)
+        if live_evals:
+            high_risk_list = [pid for pid, e in live_evals.items() if e["risk_index"] >= 60]
+            if st.button("📋 Generate Prototype Recommendation", use_container_width=True, type="primary"):
+                if high_risk_list:
+                    st.success(f"✅ Advisory Generated: Recommend rotating {', '.join(high_risk_list)} to Day Support / Mandatory Rest.")
+                else:
+                    st.success("✅ Nominal Range: All active personnel are within baseline strain tolerance.")
+                st.info("Decision Status: AI output is advisory — awaiting Company Commander sign-off.")
+        else:
+            st.caption("Awaiting personnel check-in data to generate rebalancing schedule.")
+        st.markdown('</div>', unsafe_allow_html=True)
 
-# ==================== 3. WELFARE OFFICER PORTAL ==================== #
+# ==================== 4. WELFARE OFFICER SECTION (CONSOLIDATED) ==================== #
 else:
     live_evals = st.session_state.live_evaluations
 
@@ -1027,7 +1026,7 @@ else:
         st.markdown("""<div class="pop-card" style="text-align: center; padding: 40px 20px;">
         <div style="font-size: 2.2rem; margin-bottom: 8px;">📭</div>
         <h3 style="font-weight: 800; color: #0f172a; margin-bottom: 4px;">No Live Assessment Records Available</h3>
-        <p style="color: #64748b; font-size: 0.85rem; max-width: 500px; margin: 0 auto;">No personnel have performed a voluntary assessment or telemetry check-in during this session. Log into a Personnel Account (e.g., <b>P-10001</b>) to take the check-in.</p>
+        <p style="color: #64748b; font-size: 0.85rem; max-width: 500px; margin: 0 auto;">No personnel have performed a voluntary assessment or telemetry check-in during this session. Switch to <b>PERSONNEL</b> mode to execute a check-in.</p>
         </div>""", unsafe_allow_html=True)
     else:
         selected_case = st.selectbox(
@@ -1043,11 +1042,14 @@ else:
         score_color = "#ef4444" if is_elevated else "#10b981"
         status_pill = '<span class="pill-badge-red">RISK STATUS: ELEVATED</span>' if is_elevated else '<span class="pill-badge-green">RISK STATUS: NOMINAL</span>'
 
-        if st.session_state.current_nav == "Welfare Assessment Triage":
-            st.markdown(f'<div style="font-size: 1.15rem; font-weight: 800; color: #0f172a; margin-bottom: 16px;">Unit Welfare Officer Decision Support | Live Case: {selected_case}</div>', unsafe_allow_html=True)
+        w_tab1, w_tab2, w_tab3 = st.tabs([
+            "🩺 Welfare Assessment Triage",
+            "📊 Dynamic Local XAI (SHAP)",
+            "📈 Longitudinal Trajectory"
+        ])
 
+        with w_tab1:
             w_left, w_right = st.columns([1.2, 1.8])
-
             with w_left:
                 st.markdown(f"""<div class="pop-card" style="text-align: center; padding: 28px 20px;">
 <div style="font-size: 0.85rem; font-weight: 700; color: #64748b; margin-bottom: 16px;">AI WELFARE ASSESSMENT</div>
@@ -1126,7 +1128,7 @@ else:
 <div>
 <div style="display: flex; justify-content: space-between; margin-bottom: 4px; font-weight: 600; color: #0f172a;">
 <span>Auxiliary physiological & acoustic indicators</span>
-<span style="color: #4f46e5;">{pulse_display} | Pitch: {pitch_hz_display} (Var: {case_data['jitter']:.2f}%</span>
+<span style="color: #4f46e5;">{pulse_display} | Pitch: {pitch_hz_display} (Var: {case_data['jitter']:.2f}%)</span>
 </div>
 <div style="background: #f1f5f9; height: 8px; border-radius: 4px;"><div style="background: #4f46e5; width: {min(100, int(case_data['jitter'] * 25))}%; height: 100%; border-radius: 4px;"></div></div>
 </div>
@@ -1138,7 +1140,7 @@ else:
                 b1, b2, b3 = st.columns(3)
                 with b1:
                     if b1.button("🏖️ Priority Leave", use_container_width=True, type="primary"):
-                        st.success(f"Leave advisory generated for {selected_case}. (Simulated prototype action — no external dispatch).")
+                        st.success(f"Leave advisory generated for {selected_case}. (Simulated prototype action).")
                 with b2:
                     if b2.button("👥 Buddy System", use_container_width=True, type="primary"):
                         st.info(f"Designated peer buddy notified for an informal welfare check-in with {selected_case}. (Simulated prototype action).")
@@ -1148,7 +1150,7 @@ else:
                 st.caption("⚠️ Authorised human review required: AI output is advisory — final decision by Welfare Officer.")
                 st.markdown('</div>', unsafe_allow_html=True)
 
-        elif st.session_state.current_nav == "Dynamic XAI Analysis":
+        with w_tab2:
             st.markdown(f"""<div class="pop-card">
 <h3 style="font-size: 1.1rem; font-weight: 800; color: #0f172a; margin-bottom: 4px;">Dynamic Local Explainable AI (SHAP TreeExplainer)</h3>
 <p style="color: #64748b; font-size: 0.8rem; margin-bottom: 16px;">Local feature contributions calculated dynamically from Random Forest tree paths for active case: <b>{selected_case}</b></p>
@@ -1196,10 +1198,9 @@ else:
                 }, index=display_labels)
                 st.bar_chart(shap_chart_df, color="#4f46e5", height=280)
             else:
-                st.warning("⚠️ Local Explainability (SHAP) Calculation Unavailable for this evaluation. (Execution avoided hardcoded fallback values to maintain data integrity).")
+                st.warning("⚠️ Local Explainability (SHAP) Calculation Unavailable for this evaluation.")
 
-        elif st.session_state.current_nav == "Longitudinal Trend":
-            # FIX PHOTO 2: Guarantee visible line chart even if only 1 check-in exists
+        with w_tab3:
             user_eval_history = [e for e in st.session_state.evaluation_history if e["id"] == selected_case]
             
             if len(user_eval_history) >= 2:
@@ -1213,7 +1214,6 @@ else:
                 trend_chart_df = pd.DataFrame({"Recorded Welfare Score": h_scores}, index=h_times)
                 st.line_chart(trend_chart_df, color="#ef4444" if is_elevated else "#10b981", height=260)
             else:
-                # If only 1 check-in exists, render the contextual demonstration trajectory leading up to current observation
                 st.markdown(f"""<div class="pop-card">
 <h3 style="font-size: 1.1rem; font-weight: 800; color: #0f172a; margin-bottom: 4px;">Illustrative Projected Trajectory (Simulation Model)</h3>
 <p style="color: #64748b; font-size: 0.8rem; margin-bottom: 16px;">Single active check-in recorded for {selected_case} ({case_data['risk_index']}/100). The progression trajectory below models prior rotation intervals for demonstration purposes.</p>
