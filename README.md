@@ -74,6 +74,7 @@ source .venv/bin/activate
 
 # 3. Install dependencies
 pip install -r requirements.txt
+# Note: scikit-learn is pinned to ==1.9.0 to match the serialized model artifact.
 
 # 4. Launch Air-Gapped Platform
 streamlit run app.py
